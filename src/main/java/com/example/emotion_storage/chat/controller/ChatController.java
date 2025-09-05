@@ -1,0 +1,56 @@
+package com.example.emotion_storage.chat.controller;
+
+import com.example.emotion_storage.chat.dto.request.ChatRequest;
+import com.example.emotion_storage.chat.dto.response.ChatResponse;
+import com.example.emotion_storage.chat.service.ChatService;
+import com.example.emotion_storage.global.api.ApiResponse;
+import com.example.emotion_storage.global.security.principal.CustomUserPrincipal;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+
+@Slf4j
+@RestController
+@RequestMapping("/api/v1/chat")
+@RequiredArgsConstructor
+@Tag(name = "Chat", description = "채팅 관련 API")
+public class ChatController {
+
+    private final ChatService chatService;
+
+    @PostMapping("/send")
+    @Operation(summary = "AI와 채팅 메시지 전송", description = "사용자 메시지를 AI 서버로 전송하고 응답을 받습니다.")
+    public ResponseEntity<ApiResponse<ChatResponse>> sendMessage(
+            @RequestBody ChatRequest request,
+            @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
+        
+        String userId = userPrincipal.getUser().getId().toString();
+        log.info("사용자 {}가 채팅 메시지를 전송했습니다: {}", userId, request.getMessage());
+        
+        ApiResponse<ChatResponse> response = chatService.sendMessage(request, userId);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/send-async")
+    @Operation(summary = "비동기 채팅 메시지 전송", description = "사용자 메시지를 비동기로 AI 서버에 전송합니다.")
+    public ResponseEntity<ApiResponse<ChatResponse>> sendMessageAsync(
+            @RequestBody ChatRequest request,
+            @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
+        
+        String userId = userPrincipal.getUser().getId().toString();
+        log.info("사용자 {}가 비동기 채팅 메시지를 전송했습니다: {}", userId, request.getMessage());
+        
+        ApiResponse<ChatResponse> response = chatService.sendUserMessage(request, userId);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/health")
+    @Operation(summary = "채팅 서비스 상태 확인", description = "채팅 서비스의 상태를 확인합니다.")
+    public ResponseEntity<ApiResponse<String>> healthCheck() {
+        return ResponseEntity.ok(ApiResponse.success("채팅 서비스가 정상적으로 작동 중입니다."));
+    }
+}

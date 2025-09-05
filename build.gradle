@@ -66,6 +66,10 @@ dependencies {
 
 	// H2
 	runtimeOnly 'com.h2database:h2'
+
+	// WebSocket
+	implementation 'org.springframework.boot:spring-boot-starter-websocket'
+	implementation 'org.java-websocket:Java-WebSocket:1.5.3'
 }
 
 tasks.named('test') {
