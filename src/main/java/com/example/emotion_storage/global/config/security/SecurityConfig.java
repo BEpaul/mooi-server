@@ -40,6 +40,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**",
                                 "/api/v1/users/login/**",
                                 "/api/v1/users/signup/**",
+                                "/api/v1/chat/**", // 채팅 API 인증 비활성화 (테스트용)
                                 "/docs/**",
                                 "/health",
                                 "/h2-console/**",

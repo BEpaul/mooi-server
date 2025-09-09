@@ -27,8 +27,9 @@ public class ChatController {
     public ResponseEntity<ApiResponse<ChatResponse>> sendMessage(
             @RequestBody ChatRequest request,
             @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
-        
-        String userId = userPrincipal.getUser().getId().toString();
+
+        // 테스트용: 인증이 비활성화된 경우 더미 사용자 ID 사용
+        String userId = userPrincipal != null ? userPrincipal.getId().toString() : "test-user-123";
         log.info("사용자 {}가 채팅 메시지를 전송했습니다: {}", userId, request.getMessage());
         
         ApiResponse<ChatResponse> response = chatService.sendMessage(request, userId);
@@ -41,16 +42,11 @@ public class ChatController {
             @RequestBody ChatRequest request,
             @AuthenticationPrincipal CustomUserPrincipal userPrincipal) {
         
-        String userId = userPrincipal.getUser().getId().toString();
+        // 테스트용: 인증이 비활성화된 경우 더미 사용자 ID 사용
+        String userId = userPrincipal != null ? userPrincipal.getId().toString() : "test-user-123";
         log.info("사용자 {}가 비동기 채팅 메시지를 전송했습니다: {}", userId, request.getMessage());
         
         ApiResponse<ChatResponse> response = chatService.sendUserMessage(request, userId);
         return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/health")
-    @Operation(summary = "채팅 서비스 상태 확인", description = "채팅 서비스의 상태를 확인합니다.")
-    public ResponseEntity<ApiResponse<String>> healthCheck() {
-        return ResponseEntity.ok(ApiResponse.success("채팅 서비스가 정상적으로 작동 중입니다."));
     }
 }
