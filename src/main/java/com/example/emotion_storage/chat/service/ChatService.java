@@ -2,6 +2,7 @@ package com.example.emotion_storage.chat.service;
 
 import com.example.emotion_storage.chat.dto.AiMessageDto;
 import com.example.emotion_storage.chat.dto.AiResponseDto;
+import com.example.emotion_storage.chat.dto.ChatPromptMessages;
 import com.example.emotion_storage.chat.dto.request.ChatRequest;
 import com.example.emotion_storage.chat.dto.response.ChatResponse;
 import com.example.emotion_storage.global.api.ApiResponse;
@@ -23,15 +24,13 @@ public class ChatService {
 
     public ApiResponse<ChatResponse> sendMessage(ChatRequest request, String userId) {
         try {
-            // 세션 ID가 없으면 새로 생성
-            String sessionId = request.getSessionId() != null ? 
-                request.getSessionId() : UUID.randomUUID().toString();
+            String sessionId = request.getSessionId() != null ?
+                request.getSessionId() : userId + "-" + UUID.randomUUID().toString();
 
-            // AI 서버로 전송할 메시지 생성
-            AiMessageDto aiMessage = new AiMessageDto(
-                request.getMessage(),
+            AiMessageDto aiMessage = AiMessageDto.createChatStartMessage(
                 sessionId,
-                userId
+                ChatPromptMessages.EMOTION_ANALYSIS.getMessage(),
+                request.getMessage()
             );
 
             log.info("사용자 {}의 메시지를 AI 서버로 전송합니다: {}", userId, request.getMessage());
@@ -49,7 +48,7 @@ public class ChatService {
 
             log.info("AI 서버로부터 응답을 받았습니다: {}", aiResponse.getResponse());
 
-            return ApiResponse.success(SuccessMessage.CHAT_SUCCESS, response);
+            return ApiResponse.success(SuccessMessage.CHAT_SUCCESS.getMessage(), response);
 
         } catch (Exception e) {
             log.error("채팅 메시지 처리 중 오류 발생", e);
@@ -59,9 +58,10 @@ public class ChatService {
 
     public ApiResponse<ChatResponse> sendUserMessage(ChatRequest request, String userId) {
         try {
-            // 세션 ID가 없으면 새로 생성
-            String sessionId = request.getSessionId() != null ? 
-                request.getSessionId() : UUID.randomUUID().toString();
+            String sessionId = request.getSessionId() != null ?
+                request.getSessionId() : userId + "-" + UUID.randomUUID().toString();
+
+            log.info("사용자 {}가 비동기 메시지를 전송했습니다: {}", userId, request.getMessage());
 
             // 사용자 메시지에 대한 즉시 응답 (AI 응답 없이)
             ChatResponse response = new ChatResponse(
@@ -72,24 +72,26 @@ public class ChatService {
             );
 
             // 백그라운드에서 AI 서버로 메시지 전송
-            AiMessageDto aiMessage = new AiMessageDto(
-                request.getMessage(),
+            AiMessageDto aiMessage = AiMessageDto.createChatStartMessage(
                 sessionId,
-                userId
+                ChatPromptMessages.EMOTION_ANALYSIS.getMessage(),
+                request.getMessage()
             );
 
             // 비동기로 AI 응답 처리
             webSocketClientService.sendMessageToAI(aiMessage)
                 .thenAccept(aiResponse -> {
-                    log.info("AI 응답을 받았습니다: {}", aiResponse.getResponse());
+                    log.info("사용자 {}의 AI 응답을 받았습니다: {}", userId, aiResponse.getResponse());
                     // 여기서 WebSocket을 통해 클라이언트에게 실시간으로 응답 전송
+                    // TODO: 실시간 전송
+
                 })
                 .exceptionally(throwable -> {
-                    log.error("AI 응답 처리 중 오류 발생", throwable);
+                    log.error("사용자 {}의 AI 응답 처리 중 오류 발생", userId, throwable);
                     return null;
                 });
 
-            return ApiResponse.success(SuccessMessage.CHAT_SUCCESS, response);
+            return ApiResponse.success(SuccessMessage.CHAT_SUCCESS.getMessage(), response);
 
         } catch (Exception e) {
             log.error("사용자 메시지 처리 중 오류 발생", e);
