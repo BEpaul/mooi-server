@@ -37,8 +37,9 @@ public class Report extends BaseTimeEntity {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String emotionSummary;
 
-    @Column(columnDefinition = "TEXT", nullable = false)
-    private String keywords;
+    @OneToMany(mappedBy = "report", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<Keyword> keywords = new ArrayList<>();
 
     @Column(nullable = false)
     private Boolean isOpened;
@@ -69,5 +70,10 @@ public class Report extends BaseTimeEntity {
     public void removeTimeCapsule(TimeCapsule timeCapsule) {
         this.timeCapsules.remove(timeCapsule);
         timeCapsule.setReport(null);
+    }
+
+    public void addKeyword(Keyword keyword) {
+        this.keywords.add(keyword);
+        keyword.setReport(this);
     }
 }
