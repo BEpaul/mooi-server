@@ -23,6 +23,8 @@ public enum ErrorCode {
 
     CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다."),
     CHAT_ROOM_ACCESS_DENIED(HttpStatus.FORBIDDEN, "채팅방에 접근할 수 없습니다."),
+
+    REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "리포트를 찾을 수 없습니다."),
     ;
 
     private final HttpStatus httpStatus;
