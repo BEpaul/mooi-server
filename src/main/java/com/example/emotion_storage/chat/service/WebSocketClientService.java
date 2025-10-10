@@ -23,7 +23,7 @@ public class WebSocketClientService {
 
     // 상수 정의
     private static final int REQUEST_TIMEOUT_SECONDS = 30;
-    private static final int GAUGE_WAIT_MILLISECONDS = 3000;
+    private static final int GAUGE_WAIT_MILLISECONDS = 1000;
     private static final String MESSAGE_TYPE_CHAT_DELTA = "chat.delta";
     private static final String MESSAGE_TYPE_CHAT_END = "chat.end";
     private static final String MESSAGE_TYPE_CHAT_COMPLETED = "chat.complete";
@@ -183,12 +183,16 @@ public class WebSocketClientService {
     }
 
     private void handleChatDeltaMessage(AiResponseDto response) {
-        String sessionId = getCurrentSessionId();
+        String sessionId = response.getSessionId();
+        if (sessionId == null) {
+            sessionId = getCurrentSessionId();
+        }
+        
         if (sessionId != null) {
             StringBuilder builder = responseBuilders.get(sessionId);
             if (builder != null && response.getText() != null) {
                 builder.append(response.getText());
-                log.debug("텍스트 누적: {}", response.getText());
+                log.debug("[세션:{}] 텍스트 누적: {}", sessionId, response.getText());
             }
         } else {
             log.warn("chat.delta 메시지에서 세션 ID를 찾을 수 없습니다");
@@ -196,14 +200,19 @@ public class WebSocketClientService {
     }
 
     private void handleChatEndMessage(AiResponseDto response) {
-        String sessionId = getCurrentSessionId();
+        String sessionId = response.getSessionId();
+        if (sessionId == null) {
+            sessionId = getCurrentSessionId();
+        }
+        
         if (sessionId != null) {
-            chatEndReceived.put(sessionId, true);
+            final String finalSessionId = sessionId;
+            chatEndReceived.put(finalSessionId, true);
             
             CompletableFuture.delayedExecutor(GAUGE_WAIT_MILLISECONDS, TimeUnit.MILLISECONDS)
-                    .execute(() -> completeResponse(sessionId));
+                    .execute(() -> completeResponse(finalSessionId));
             
-            log.debug("[세션:{}] chat.end 수신, gauge 대기 중...", sessionId);
+            log.debug("[세션:{}] chat.end 수신, gauge 대기 중...", finalSessionId);
         } else {
             log.warn("chat.end 메시지에서 세션 ID를 찾을 수 없습니다");
         }
@@ -236,7 +245,11 @@ public class WebSocketClientService {
     }
 
     private void handleErrorMessage(AiResponseDto response) {
-        String sessionId = getCurrentSessionId();
+        String sessionId = response.getSessionId();
+        if (sessionId == null) {
+            sessionId = getCurrentSessionId();
+        }
+        
         if (sessionId != null) {
             CompletableFuture<AiResponseDto> future = pendingRequests.remove(sessionId);
             responseBuilders.remove(sessionId);
@@ -252,10 +265,20 @@ public class WebSocketClientService {
     }
 
     private void handleGaugeResultMessage(AiResponseDto response) {
-        String sessionId = currentSessionId;
+        String sessionId = response.getSessionId();
+        if (sessionId == null) {
+            log.warn("gauge.result 메시지에 sessionId가 없어서 getCurrentSessionId() 사용");
+            sessionId = getCurrentSessionId();
+        }
+        
         GaugeDto gauge = response.getGauge();
         
         if (sessionId != null && gauge != null) {
+            if (!pendingRequests.containsKey(sessionId)) {
+                log.warn("[세션:{}] 이미 완료된 세션의 gauge 결과가 도착했습니다. 무시합니다.", sessionId);
+                return;
+            }
+            
             gaugeResults.put(sessionId, gauge);
             
             log.info("[세션:{}] 감정 분석 결과를 받았습니다 - 전체 점수: {}, 턴 수: {}, 감정 표현: {}, 감정 다양성: {}, 사건 참조: {}, 감정 변화: {}, 요약: {}", 
@@ -269,10 +292,10 @@ public class WebSocketClientService {
             }
         } else {
             if (sessionId == null) {
-                log.warn("gauge.result 메시지에서 세션 ID를 찾을 수 없습니다.");
+                log.warn("gauge.result 메시지에서 세션 ID를 찾을 수 없습니다. 응답: {}", response);
             }
             if (gauge == null) {
-                log.warn("gauge.result 메시지에서 gauge 정보가 null입니다.");
+                log.warn("[세션:{}] gauge.result 메시지에서 gauge 정보가 null입니다.", sessionId);
             }
         }
     }
