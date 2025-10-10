@@ -23,7 +23,7 @@ public class WebSocketClientService {
 
     // 상수 정의
     private static final int REQUEST_TIMEOUT_SECONDS = 30;
-    private static final int GAUGE_WAIT_MILLISECONDS = 1000;
+    private static final int GAUGE_WAIT_MILLISECONDS = 3000;
     private static final String MESSAGE_TYPE_CHAT_DELTA = "chat.delta";
     private static final String MESSAGE_TYPE_CHAT_END = "chat.end";
     private static final String MESSAGE_TYPE_CHAT_COMPLETED = "chat.complete";
